@@ -20,11 +20,11 @@ StandardService的initialize()、start()调用servlet容器Container和所有(**
 
 initialize()、start()
 
-> HttpConnection过程
+> HttpConnection、HttpProcessor过程
 
 HttpConnection的start()会启动生成很多HttpProcessor，让这些processor进行run()(阻塞),自身也调用run()
 
-HttpConnection的run()会调用HttpProcessor的assign()**（解析request）**
+HttpConnection的run()会调用HttpProcessor的assign()**（HttpProcessor组合了这两个对象，在process方法里进行相关解析和生成，最终传给servlet的service）**
 
 HttpProcessor的assign()会唤醒await,即HttpProcessor的run()不再阻塞(**异步操作,HttpConnect不会阻塞，可以马上返回进行下一个请求**)
 
@@ -115,3 +115,64 @@ server.xml中，Server元素定义了ServerLifecycleListener类型的监听器�
 即创建对象和创建管理对象都是start
 
 initialize()只会设置initialized变量为true
+
+
+
+## 设计模式：
+
+### 1.外观模式
+
+> 对于Request和Response对象，使用了RequestFacade和ResponseFacade，保护parse方法和sendStaticResource方法
+
+>Session对象使用StandardSessionFacade对外使用
+
+### 2.单例模式
+
+>org.apache.catalina.util.StringManager用来处理应用程序中不同模块和Catalina本身中错误消息的国际化操作。每个包下有一个properties文件，且使用**单例模式**，使同一个包下的所有对象共享StringManager对象，每个StringManager都会读取各自包下指定的properties文件
+
+### 3.工厂模式
+
+>ServerSocketFactory为接口，DefaultServerSocketFactory为默认实现类，创建Socket可以通过open方法里面调用createSocket，createSocket里面为new ServerSocket
+>
+>可以避免直接写new SeverSocket，达到解耦的目的
+
+>使用ClassLoaderFactory创建类加载器
+
+### 4.责任链模式
+
+>Pipeline和Valve
+
+### 5.观察者模式
+
+>LifecycleListener:抽象观察者,lifecycleEvent就是当主题变化时要执行的方法
+>
+>SimpleContextLifecycleListener:具体观察者
+>
+>Lifecycle:抽象主题，定义了管理观察者的方法和它要做的其他方法,add即添加观察者,remove和fireLifecycleEvent是必要的方法，而start和stop是扩展的，为了实现可以通过单一启动/关闭机制**(通过强制到同一接口来实现)**来启动/关闭所有的组件添加的
+>
+>SimpleContext:具体主题
+>
+>LifecycleSupport:扩展，代理了具体主题对观察者的操作,fireLifecycleEvent使用了克隆模式
+>
+>LifecycleEvent:定义事件类别，对不同的事件可区别处理，更加灵活
+
+### 6.委派模式
+
+>StandardHostDeployer为StandHost的辅助类，来完成部署与安装Web应用程序的相关任务
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
